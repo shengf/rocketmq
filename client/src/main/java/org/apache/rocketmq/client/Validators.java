@@ -114,11 +114,13 @@ public class Validators {
                 VALID_PATTERN_STR), null);
         }
 
+        // shengfei: topic最长255
         if (topic.length() > CHARACTER_MAX_LENGTH) {
             throw new MQClientException("The specified topic is longer than topic max length 255.", null);
         }
 
         //whether the same with system reserved keyword
+        // shengfei: 默认topic——TBW102
         if (topic.equals(MixAll.DEFAULT_TOPIC)) {
             throw new MQClientException(
                 String.format("The topic[%s] is conflict with default topic.", topic), null);

@@ -50,6 +50,9 @@ import org.apache.rocketmq.remoting.protocol.RemotingSysResponseCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Netty通信处理的抽象类，定义并封装Netty处理的公共处理方法
+ */
 public abstract class NettyRemotingAbstract {
 
     /**
@@ -69,6 +72,7 @@ public abstract class NettyRemotingAbstract {
 
     /**
      * This map caches all on-going requests.
+     * 缓存请求码与相应的关联映射
      */
     protected final ConcurrentMap<Integer /* opaque */, ResponseFuture> responseTable =
         new ConcurrentHashMap<Integer, ResponseFuture>(256);
@@ -76,6 +80,8 @@ public abstract class NettyRemotingAbstract {
     /**
      * This container holds all processors per request code, aka, for each incoming request, we may look up the
      * responding processor in this map to handle the request.
+     * code：请求业务码
+     * Pair<NettyRequestProcessor, ExecutorService> 业务处理器，业务线程池
      */
     protected final HashMap<Integer/* request code */, Pair<NettyRequestProcessor, ExecutorService>> processorTable =
         new HashMap<Integer, Pair<NettyRequestProcessor, ExecutorService>>(64);
@@ -156,6 +162,7 @@ public abstract class NettyRemotingAbstract {
 
     /**
      * Process incoming request command issued by remote peer.
+     * 根据RemotingCommand的请求业务码来匹配相应的业务处理器，然后声称一个新的线程提交到对应的业务线程池进行异步处理
      *
      * @param ctx channel handler context.
      * @param cmd request command.
@@ -170,12 +177,17 @@ public abstract class NettyRemotingAbstract {
                 @Override
                 public void run() {
                     try {
+
+                        // rpc hook
                         RPCHook rpcHook = NettyRemotingAbstract.this.getRPCHook();
                         if (rpcHook != null) {
                             rpcHook.doBeforeRequest(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd);
                         }
 
+                        // processor 处理请求
                         final RemotingCommand response = pair.getObject1().processRequest(ctx, cmd);
+
+                        // rpc hook
                         if (rpcHook != null) {
                             rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd, response);
                         }
@@ -218,7 +230,9 @@ public abstract class NettyRemotingAbstract {
             }
 
             try {
+                // requestTask 封装
                 final RequestTask requestTask = new RequestTask(run, ctx.channel(), cmd);
+                // 线程池提交
                 pair.getObject2().submit(requestTask);
             } catch (RejectedExecutionException e) {
                 if ((System.currentTimeMillis() % 10000) == 0) {
@@ -337,6 +351,7 @@ public abstract class NettyRemotingAbstract {
             Entry<Integer, ResponseFuture> next = it.next();
             ResponseFuture rep = next.getValue();
 
+            // 已经在超时时间外超时了1s
             if ((rep.getBeginTimestamp() + rep.getTimeoutMillis() + 1000) <= System.currentTimeMillis()) {
                 rep.release();
                 it.remove();
@@ -399,6 +414,8 @@ public abstract class NettyRemotingAbstract {
     public void invokeAsyncImpl(final Channel channel, final RemotingCommand request, final long timeoutMillis,
         final InvokeCallback invokeCallback)
         throws InterruptedException, RemotingTooMuchRequestException, RemotingTimeoutException, RemotingSendRequestException {
+
+        // 相当于request ID, RemotingCommand会为每一个request产生一个request ID, 从0开始, 每次加1
         final int opaque = request.getOpaque();
         boolean acquired = this.semaphoreAsync.tryAcquire(timeoutMillis, TimeUnit.MILLISECONDS);
         if (acquired) {
@@ -407,6 +424,7 @@ public abstract class NettyRemotingAbstract {
             final ResponseFuture responseFuture = new ResponseFuture(opaque, timeoutMillis, invokeCallback, once);
             this.responseTable.put(opaque, responseFuture);
             try {
+                // 使用netty的channel发送请求数据
                 channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture f) throws Exception {

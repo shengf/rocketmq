@@ -1203,6 +1203,8 @@ public class CommitLog {
             switch (tranType) {
                 // Prepared and Rollback message is not consumed, will not enter the
                 // consumer queuec
+                // shengfei: broker在将消息写入CommitLog的时候会判断消息类型，
+                //           如果是是prepare或者rollback消息，ConsumeQueue的offset
                 case MessageSysFlag.TRANSACTION_PREPARED_TYPE:
                 case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
                     queueOffset = 0L;

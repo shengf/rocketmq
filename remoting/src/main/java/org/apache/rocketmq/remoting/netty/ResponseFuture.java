@@ -23,6 +23,9 @@ import org.apache.rocketmq.remoting.InvokeCallback;
 import org.apache.rocketmq.remoting.common.SemaphoreReleaseOnlyOnce;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+/**
+ * 返回响应
+ */
 public class ResponseFuture {
     private final int opaque;
     private final long timeoutMillis;
@@ -37,6 +40,14 @@ public class ResponseFuture {
     private volatile boolean sendRequestOK = true;
     private volatile Throwable cause;
 
+    /**
+     *
+     * @param opaque
+     * @param timeoutMillis 允许超时时间
+     * @param invokeCallback 回调方法(同步时为null)
+     * @param once 信号量，用于流控（当多个线程同时往一个连接写数据时可以通过信号量控制permit同时写许可的数量；
+     *             同步时为null）
+     */
     public ResponseFuture(int opaque, long timeoutMillis, InvokeCallback invokeCallback,
         SemaphoreReleaseOnlyOnce once) {
         this.opaque = opaque;

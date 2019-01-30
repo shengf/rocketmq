@@ -41,6 +41,13 @@ public class Producer {
                 Message msg =
                     new Message("TopicTestjjj", tags[i % tags.length], "KEY" + i,
                         ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
+
+
+                // shengfei:
+                // RocketMQ 通过MessageQueueSelector的select来确定消息发送到哪一个队列上
+                // RocketMQ 默认提供了两种MessageQueueSelector实现：
+                //      SelectMessageQueueByHash（hash）和SelectMessageQueueByRandom（随机），
+                // 当然，可以也可以自己实现MessageQueueSelector来决定分发策略，如下：
                 SendResult sendResult = producer.send(msg, new MessageQueueSelector() {
                     @Override
                     public MessageQueue select(List<MessageQueue> mqs, Message msg, Object arg) {

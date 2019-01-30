@@ -69,13 +69,43 @@ public class RemotingCommand {
         }
     }
 
+    /**
+     * request: 请求响应码，应答方根据不同的请求码进行不同的处理
+     * response：应答响应码，0表示成功，非0表示各种错误
+     */
     private int code;
+
+    /**
+     * 请求方/应答方的实现语言
+     */
     private LanguageCode language = LanguageCode.JAVA;
+
+    /**
+     * 请求方/应答方的程序版本
+     */
     private int version = 0;
+
+    /**
+     * request：相当于reqeustId，在同一个连接上的不同请求标识码，与响应消息中的相对应
+     * response：应答不做修改直接返回
+     */
     private int opaque = requestId.getAndIncrement();
+
+    /**
+     * 区分是普通RPC还是onewayRPC的标识
+     */
     private int flag = 0;
+
+    /**
+     * 传输自定义文本信息
+     */
     private String remark;
+
+    /**
+     * 请求/应答自定义扩展信息
+     */
     private HashMap<String, String> extFields;
+
     private transient CommandCustomHeader customHeader;
 
     private SerializeType serializeTypeCurrentRPC = serializeTypeConfigInThisServer;
@@ -142,7 +172,11 @@ public class RemotingCommand {
     }
 
     public static RemotingCommand decode(final ByteBuffer byteBuffer) {
+
+        // byteBuffer总长度(此byteBuffer已经去掉了协议中的总长度部分)
         int length = byteBuffer.limit();
+
+        // 获取前4个字节，组装int类型，即为消息头部总长度部分(1字节的序列化类型+3字节的消息头长度)
         int oriHeaderLen = byteBuffer.getInt();
         int headerLength = getHeaderLength(oriHeaderLen);
 
@@ -208,12 +242,21 @@ public class RemotingCommand {
         return true;
     }
 
+    /**
+     * 将序列化类型和headerData长度编码放到一个byte[4]的数组中
+     * @param source
+     * @param type
+     * @return
+     */
     public static byte[] markProtocolType(int source, SerializeType type) {
         byte[] result = new byte[4];
 
         result[0] = type.getCode();
+        //右移16位后再和255与->“16-24位”
         result[1] = (byte) ((source >> 16) & 0xFF);
+        //右移8位后再和255与->“8-16位”
         result[2] = (byte) ((source >> 8) & 0xFF);
+        //右移0位后再和255与->“8-0位”
         result[3] = (byte) (source & 0xFF);
         return result;
     }
@@ -340,16 +383,16 @@ public class RemotingCommand {
 
         ByteBuffer result = ByteBuffer.allocate(4 + length);
 
-        // length
+        // length 总长度：4 bytes（1个int类型）
         result.putInt(length);
 
-        // header length
+        // header length 头部总长度：4 bytes(包括1byte的序列化类型+3bytes的头长度)
         result.put(markProtocolType(headerData.length, serializeTypeCurrentRPC));
 
-        // header data
+        // header data 消息头数据
         result.put(headerData);
 
-        // body data;
+        // body data; 消息主体数据
         if (this.body != null) {
             result.put(this.body);
         }

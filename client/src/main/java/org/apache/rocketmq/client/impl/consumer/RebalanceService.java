@@ -22,6 +22,7 @@ import org.apache.rocketmq.common.ServiceThread;
 import org.slf4j.Logger;
 
 public class RebalanceService extends ServiceThread {
+    // shengfei:
     private static long waitInterval =
         Long.parseLong(System.getProperty(
             "rocketmq.client.rebalance.waitInterval", "20000"));

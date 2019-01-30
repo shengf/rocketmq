@@ -190,6 +190,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 }
             });
 
+        // 定时扫描清理responseTable：3s后开始，频率1s
         this.timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -390,8 +391,9 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
     }
 
     private Channel getAndCreateChannel(final String addr) throws InterruptedException {
-        if (null == addr)
+        if (null == addr) {
             return getAndCreateNameserverChannel();
+        }
 
         ChannelWrapper cw = this.channelTables.get(addr);
         if (cw != null && cw.isOK()) {
@@ -511,6 +513,8 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
     public void invokeAsync(String addr, RemotingCommand request, long timeoutMillis, InvokeCallback invokeCallback)
         throws InterruptedException, RemotingConnectException, RemotingTooMuchRequestException, RemotingTimeoutException,
         RemotingSendRequestException {
+
+        // 根据addr获取相应的channel，如果本地缓存中没有则创建
         final Channel channel = this.getAndCreateChannel(addr);
         if (channel != null && channel.isActive()) {
             try {

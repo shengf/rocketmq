@@ -216,6 +216,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             this.nettyEventExecutor.start();
         }
 
+        // 定时扫描清理responseTable：3s后开始，频率1s
         this.timer.scheduleAtFixedRate(new TimerTask() {
 
             @Override
@@ -386,6 +387,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         }
     }
 
+    /**
+     * server端接收消息并处理
+     */
     class NettyServerHandler extends SimpleChannelInboundHandler<RemotingCommand> {
 
         @Override

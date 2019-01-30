@@ -26,20 +26,25 @@ import org.apache.rocketmq.remoting.common.RemotingHelper;
 
 public class TransactionProducer {
     public static void main(String[] args) throws MQClientException, InterruptedException {
+
+        // shengfei: 对未决事务，MQ服务端回查的Listener
+        // （即轮询到prepared msg时，会根据这个Listener的策略来决断事务）
         TransactionCheckListener transactionCheckListener = new TransactionCheckListenerImpl();
+        // shengfei: 生产者
         TransactionMQProducer producer = new TransactionMQProducer("please_rename_unique_group_name");
         producer.setCheckThreadPoolMinSize(2);
         producer.setCheckThreadPoolMaxSize(2);
         producer.setCheckRequestHoldMax(2000);
+        // shengfei: 设置事务决断处理类
         producer.setTransactionCheckListener(transactionCheckListener);
         producer.start();
 
         String[] tags = new String[] {"TagA", "TagB", "TagC", "TagD", "TagE"};
+        // shengfei: 本地事务的处理逻辑
         TransactionExecuterImpl tranExecuter = new TransactionExecuterImpl();
         for (int i = 0; i < 100; i++) {
             try {
-                Message msg =
-                    new Message("TopicTest", tags[i % tags.length], "KEY" + i,
+                Message msg = new Message("TopicTest", tags[i % tags.length], "KEY" + i,
                         ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
                 SendResult sendResult = producer.sendMessageInTransaction(msg, tranExecuter, null);
                 System.out.printf("%s%n", sendResult);

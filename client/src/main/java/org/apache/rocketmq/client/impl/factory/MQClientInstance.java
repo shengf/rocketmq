@@ -226,20 +226,29 @@ public class MQClientInstance {
             switch (this.serviceState) {
                 case CREATE_JUST:
                     this.serviceState = ServiceState.START_FAILED;
+
                     // If not specified,looking address from name server
+                    // shengfei: 如果没有指定namesrv地址，将会自动寻址
                     if (null == this.clientConfig.getNamesrvAddr()) {
                         this.mQClientAPIImpl.fetchNameServerAddr();
                     }
-                    // Start request-response channel
+
+                    // Start request-response channel 启动remoteClient
                     this.mQClientAPIImpl.start();
+
                     // Start various schedule tasks
+                    // shengfei: 启动多个定时器
                     this.startScheduledTask();
-                    // Start pull service
+
+                    // Start pull service 启动拉取消息的服务
                     this.pullMessageService.start();
-                    // Start rebalance service
+
+                    // Start rebalance service 启动负载均衡服务
                     this.rebalanceService.start();
-                    // Start push service
+
+                    // Start push service 重新做一次启动（注意参数是false）
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
+
                     log.info("the client factory [{}] start OK", this.clientId);
                     this.serviceState = ServiceState.RUNNING;
                     break;
@@ -255,7 +264,12 @@ public class MQClientInstance {
         }
     }
 
+    /**
+     * 定时任务
+     */
     private void startScheduledTask() {
+
+        // 获取nameServer地址：2min一次
         if (null == this.clientConfig.getNamesrvAddr()) {
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
@@ -270,6 +284,7 @@ public class MQClientInstance {
             }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
         }
 
+        // 更新路由信息：默认频率30s
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -282,6 +297,7 @@ public class MQClientInstance {
             }
         }, 10, this.clientConfig.getPollNameServerInterval(), TimeUnit.MILLISECONDS);
 
+        // 清理下线Broker并发送心跳：默认30s
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -295,6 +311,7 @@ public class MQClientInstance {
             }
         }, 1000, this.clientConfig.getHeartbeatBrokerInterval(), TimeUnit.MILLISECONDS);
 
+        // 持久化consumerOffset: 默认5s一次
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -307,6 +324,7 @@ public class MQClientInstance {
             }
         }, 1000 * 10, this.clientConfig.getPersistConsumerOffsetInterval(), TimeUnit.MILLISECONDS);
 
+        // 线程池调整: 1min一次
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -521,6 +539,8 @@ public class MQClientInstance {
 
         if (!this.brokerAddrTable.isEmpty()) {
             long times = this.sendHeartbeatTimesTotal.getAndIncrement();
+
+            // 遍历brokerTable中的每一个broker，发送心跳
             Iterator<Entry<String, HashMap<Long, String>>> it = this.brokerAddrTable.entrySet().iterator();
             while (it.hasNext()) {
                 Entry<String, HashMap<Long, String>> entry = it.next();
@@ -531,9 +551,12 @@ public class MQClientInstance {
                         Long id = entry1.getKey();
                         String addr = entry1.getValue();
                         if (addr != null) {
+
+                            // 不是消费端，则只向master发送心跳
                             if (consumerEmpty) {
-                                if (id != MixAll.MASTER_ID)
+                                if (id != MixAll.MASTER_ID) {
                                     continue;
+                                }
                             }
 
                             try {
@@ -762,8 +785,9 @@ public class MQClientInstance {
     }
 
     private boolean topicRouteDataIsChange(TopicRouteData olddata, TopicRouteData nowdata) {
-        if (olddata == null || nowdata == null)
+        if (olddata == null || nowdata == null) {
             return true;
+        }
         TopicRouteData old = olddata.cloneTopicRouteData();
         TopicRouteData now = nowdata.cloneTopicRouteData();
         Collections.sort(old.getQueueDatas());
