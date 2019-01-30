@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -14,32 +15,20 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
+<configuration>
 
-<java>
-    <debug>false</debug>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{5} - %msg%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
 
-    <javahome>${JAVA_HOME}</javahome>
+    <logger name="RocketmqCommon" level="INFO" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
 
-    <jvmtype>server</jvmtype>
-
-    <mainclass>org.apache.rocketmq.filtersrv.FiltersrvStartup</mainclass>
-
-    <properties>
-        <java.ext.dirs>${cpd}/../lib</java.ext.dirs>
-        <rocketmq.home.dir>${cpd}/..</rocketmq.home.dir>
-    </properties>
-
-    <classpaths>
-    </classpaths>
-
-    <options>
-        <-Xms512m>
-    </-Xms512m>
-    <-Xmx1g>
-</-Xmx1g>
-<-XX:NewSize>256M</-XX:NewSize>
-<-XX:MaxNewSize>512M</-XX:MaxNewSize>
-<-XX:PermSize>128M</-XX:PermSize>
-<-XX:MaxPermSize>128M</-XX:MaxPermSize>
-    </options>
-    </java>
+</configuration>
